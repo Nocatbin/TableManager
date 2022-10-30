@@ -1,17 +1,18 @@
 #include <iostream>
+#include <memory>
 #include <BPlusNode.hpp>
 
 int main(void) {
     std::cout << "Test" << std::endl;
-    BPlusNode::NodePtr tree(new BPlusNode(3, true));
+    BPlusNode::NodePtr tree = std::make_shared<BPlusNode>(3, true);
     BPlusNode::NodePtr newentry;
     tree->Insert(1, 1, newentry);
     tree->Insert(2, 1, newentry);
     tree->Insert(3, 1, newentry);
     // tree->Insert(4, 1, newentry);
-    // if (newentry != nullptr) {
-    //     root = root->UpdateRoot(2, newentry);
-    // }
+    if (newentry != nullptr) {
+        tree = tree->UpdateRoot(2, newentry);
+    }
     return 0;
 }
 

@@ -19,7 +19,7 @@ CLStatus BPlusNode::Release() {
     // }
 }
 
-CLStatus BPlusNode::Insert(int key, int val, NodePtr newentry) {
+CLStatus BPlusNode::Insert(int key, int val, NodePtr &newentry) {
     if (is_leaf_) {
         // 第一个大于等于key
         std::vector<int>::iterator iter =
@@ -38,7 +38,7 @@ CLStatus BPlusNode::Insert(int key, int val, NodePtr newentry) {
                 std::cout << " " << this->keys_[idx];
             }
             std::cout << std::endl;
-            this->keys_.resize(t + 1);
+            this->keys_.resize(t);
             newentry->next_node_ = this->next_node_;
             if (newentry->next_node_ != nullptr) {
                 newentry->next_node_->prev_node_ = newentry;
@@ -64,11 +64,34 @@ CLStatus BPlusNode::Insert(int key, int val, NodePtr newentry) {
     }
 }
 
-// BPlusNode::NodePtr BPlusNode::UpdateRoot(int key, NodePtr newentry) {
-//     BTreeNode *root = new BTreeNode(leaf_size, non_leaf_size, false);
-//     root->keys.push_back(val);
-//     root->C.push_back(this);
-//     root->C.push_back(newentry);
-//     return root;
-// }
+void BPlusNode::Traverse() {
+    for (int idx = 0; idx < keys_.size(); idx++) {
+        std::cout << " " << keys_[idx];
+    }
+    std::cout << std::endl;
+    if (is_leaf_) {
+        std::cout << "Leaf Printed!" << std::endl;
+        return;
+    } else {
+        for (int idx = 0; idx < child_ptrs_.size(); idx++) {
+            child_ptrs_[idx]->Traverse();
+        }
+    }
+}
+
+BPlusNode::NodePtr BPlusNode::UpdateRoot(int key, NodePtr &newentry) {
+    BPlusNode::NodePtr root = std::make_shared<BPlusNode>(degree_, false);
+    root->keys_.emplace_back(key);
+    root->child_ptrs_.emplace_back(shared_from_this());
+    root->child_ptrs_.emplace_back(newentry);
+    // auto& vec = root->child_ptrs_;
+    // for (int idx = 0; idx < vec.size(); idx++) {
+    //     for (int y = 0; y < vec[idx]->keys_.size(); y++) {
+    //         std::cout << "left tree: " << vec[idx]->keys_[y] << std::endl;
+    //     }
+    // }
+    root->Traverse();
+    return root;
+}
+
 CLStatus BPlusNode::Search() {}
