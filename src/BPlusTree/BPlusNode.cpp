@@ -10,21 +10,13 @@ BPlusNode::BPlusNode(int degree, bool is_leaf)
       next_node_(nullptr),
       prev_node_(nullptr) {}
 
-CLStatus BPlusNode::Release() {
-    // if (child_ptrs_.size() == 0){
-
-    // }
-    // for (int index = 0; index < child_ptrs_.size(); index++) {
-    //     child_ptrs_[index]->Release();
-    // }
-}
-
 CLStatus BPlusNode::Insert(int key, int val, NodePtr &newentry) {
     if (is_leaf_) {
         // 第一个大于等于key
         std::vector<int>::iterator iter =
             std::lower_bound(keys_.begin(), keys_.end(), key);
         keys_.insert(iter, key);
+        // values_.insert(iter, key);
         std::cout << "Insert key: " << key << std::endl;
 
         if (keys_.size() > degree_ - 1) {
@@ -44,23 +36,36 @@ CLStatus BPlusNode::Insert(int key, int val, NodePtr &newentry) {
                 newentry->next_node_->prev_node_ = newentry;
             }
             this->next_node_ = newentry;
-            // newentry->prev_node_ = this;
+            newentry->prev_node_ = shared_from_this();
         }
     } else {
-        // int index = 0;
-        // while (index < keys_.size() && key >= keys_[index]) {
-        //     index++;
-        // }
-        // // child_ptrs_[index]->Insert(key, val, newentry);
-        // if (newentry == nullptr) {
-        //     return;
-        // }
-        // // enter(newentry, *val, i);
-        // if (keys_.size() <= degree_) {
-        //     newentry = NULL;
-        // } else {
-        //     split(val, newentry);
-        // }
+        int index = 0;
+        while (index < keys_.size() && key >= keys_[index]) {
+            index++;
+        }
+        child_ptrs_[index]->Insert(key, val, newentry);
+        if (newentry != nullptr) {
+            keys_.insert(keys_.begin() + index, newentry->keys_[0]);
+            child_ptrs_.insert(child_ptrs_.begin() + index + 1, newentry);
+
+        } else {
+            return CLStatus(0, 0);
+        }
+        if (keys_.size() > degree_ - 1) {
+            int t = degree_ / 2;
+            newentry.reset(new BPlusNode(degree_, false));
+            // *val = this->keys[t];
+            for (int i = t; i < keys_.size(); i++) {
+                newentry->keys_.push_back(this->keys_[i]);
+            }
+            for (int i = t + 1; i < child_ptrs_.size(); i++) {
+                newentry->child_ptrs_.push_back(this->child_ptrs_[i]);
+            }
+            this->keys_.resize(t);
+            this->child_ptrs_.resize(t + 1);
+        } else {
+            newentry.reset();
+        }
     }
 }
 
@@ -79,9 +84,10 @@ void BPlusNode::Traverse() {
     }
 }
 
-BPlusNode::NodePtr BPlusNode::UpdateRoot(int key, NodePtr &newentry) {
+BPlusNode::NodePtr BPlusNode::UpdateRoot(NodePtr &newentry) {
     BPlusNode::NodePtr root = std::make_shared<BPlusNode>(degree_, false);
-    root->keys_.emplace_back(key);
+    std::cout << "updating root" << std::endl;
+    root->keys_.emplace_back(newentry->keys_[0]);
     root->child_ptrs_.emplace_back(shared_from_this());
     root->child_ptrs_.emplace_back(newentry);
     // auto& vec = root->child_ptrs_;
@@ -90,7 +96,7 @@ BPlusNode::NodePtr BPlusNode::UpdateRoot(int key, NodePtr &newentry) {
     //         std::cout << "left tree: " << vec[idx]->keys_[y] << std::endl;
     //     }
     // }
-    root->Traverse();
+
     return root;
 }
 

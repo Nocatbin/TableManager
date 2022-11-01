@@ -7,4 +7,5 @@ class BPlusTree {
     BPlusNode::NodePtr root;
     BPlusTree(int degree);
     void Insert(int key, int value);
+    void Print();
 };
