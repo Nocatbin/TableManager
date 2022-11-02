@@ -25,6 +25,7 @@ CLStatus BPlusNode::Insert(int key, int val, NodePtr &newentry) {
             newentry.reset(new BPlusNode(degree_, true));
             // val = this->keys_[t + 1];
             std::cout << "keys in newentry:";
+            newentry->new_root_key = this->keys_[t];
             for (int idx = t; idx < keys_.size(); idx++) {
                 newentry->keys_.push_back(this->keys_[idx]);
                 std::cout << " " << this->keys_[idx];
@@ -55,13 +56,15 @@ CLStatus BPlusNode::Insert(int key, int val, NodePtr &newentry) {
             int t = degree_ / 2;
             newentry.reset(new BPlusNode(degree_, false));
             // *val = this->keys[t];
-            for (int i = t; i < keys_.size(); i++) {
+            newentry->new_root_key = this->keys_[t];
+            for (int i = t + 1; i < keys_.size(); i++) {
                 newentry->keys_.push_back(this->keys_[i]);
             }
+
+            this->keys_.resize(t);
             for (int i = t + 1; i < child_ptrs_.size(); i++) {
                 newentry->child_ptrs_.push_back(this->child_ptrs_[i]);
             }
-            this->keys_.resize(t);
             this->child_ptrs_.resize(t + 1);
         } else {
             newentry.reset();
@@ -87,7 +90,11 @@ void BPlusNode::Traverse() {
 BPlusNode::NodePtr BPlusNode::UpdateRoot(NodePtr &newentry) {
     BPlusNode::NodePtr root = std::make_shared<BPlusNode>(degree_, false);
     std::cout << "updating root" << std::endl;
-    root->keys_.emplace_back(newentry->keys_[0]);
+    if (newentry->new_root_key != -1) {
+        root->keys_.emplace_back(newentry->new_root_key);
+    } else {
+        std::cerr << "Fatal, root key error" << std::endl;
+    }
     root->child_ptrs_.emplace_back(shared_from_this());
     root->child_ptrs_.emplace_back(newentry);
     // auto& vec = root->child_ptrs_;

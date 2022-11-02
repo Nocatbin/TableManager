@@ -16,7 +16,7 @@ class BPlusNode : public std::enable_shared_from_this<BPlusNode> {
     bool is_leaf_;
     NodePtr prev_node_;
     NodePtr next_node_;
-
+    int new_root_key = -1;
     BPlusNode() = delete;
     BPlusNode(int node_size, bool is_leaf);
     CLStatus Insert(int key, int val, NodePtr &newentry);

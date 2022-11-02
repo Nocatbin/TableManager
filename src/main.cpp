@@ -12,7 +12,7 @@ int main(void) {
     tree->Insert(3, 1);
     tree->Insert(4, 1);
     tree->Insert(5, 1);
-    // tree->Insert(6, 1);
+    tree->Insert(6, 1);
     // if (newentry != nullptr) {
     //     tree = tree->UpdateRoot(newentry);
     // }
