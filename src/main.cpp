@@ -13,6 +13,7 @@ int main(void) {
     tree->Insert(4, 1);
     tree->Insert(5, 1);
     tree->Insert(6, 1);
+    tree->Insert(7, 1);
     // if (newentry != nullptr) {
     //     tree = tree->UpdateRoot(newentry);
     // }
@@ -21,7 +22,7 @@ int main(void) {
     //     tree = tree->UpdateRoot(newentry);
     // }
     tree->Print();
-    TableManager table("table.csv");
+    // TableManager table("table.csv");
     // table.CreateTable();
     return 0;
 }

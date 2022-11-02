@@ -46,7 +46,7 @@ CLStatus BPlusNode::Insert(int key, int val, NodePtr &newentry) {
         }
         child_ptrs_[index]->Insert(key, val, newentry);
         if (newentry != nullptr) {
-            keys_.insert(keys_.begin() + index, newentry->keys_[0]);
+            keys_.insert(keys_.begin() + index, newentry->new_root_key);
             child_ptrs_.insert(child_ptrs_.begin() + index + 1, newentry);
 
         } else {
