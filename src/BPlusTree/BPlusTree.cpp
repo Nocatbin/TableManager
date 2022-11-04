@@ -7,7 +7,7 @@ BPlusTree::BPlusTree(int degree) {
     root.reset(new BPlusNode(degree, true));
 }
 
-void BPlusTree::Insert(int key, int value) {
+void BPlusTree::Insert(long key, long value) {
     BPlusNode::NodePtr newentry;
     root->Insert(key, value, newentry);
     if (newentry != nullptr) {

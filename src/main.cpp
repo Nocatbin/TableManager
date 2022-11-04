@@ -1,29 +1,47 @@
 #include <iostream>
 #include <memory>
+#include <string>
+// #include <string.h>
 // #include <BPlusNode.hpp>
 #include <BPlusTree.hpp>
 #include <TableManager.hpp>
 
 int main(void) {
     std::cout << "Test" << std::endl;
+
     std::shared_ptr<BPlusTree> tree = std::make_shared<BPlusTree>(3);
-    tree->Insert(1, 1);
-    tree->Insert(2, 1);
-    tree->Insert(3, 1);
-    tree->Insert(4, 1);
-    tree->Insert(5, 1);
-    tree->Insert(6, 1);
-    tree->Insert(7, 1);
-    // if (newentry != nullptr) {
-    //     tree = tree->UpdateRoot(newentry);
+    // tree->Insert(1, 1);
+    // tree->Insert(2, 1);
+    // tree->Insert(3, 1);
+    // tree->Insert(4, 1);
+    // tree->Insert(5, 1);
+    // tree->Insert(6, 1);
+    // tree->Insert(7, 1);
+    // tree->Insert(8, 1);
+    // tree->Insert(9, 1);
+    // tree->Insert(10, 1);
+    // tree->Insert(11, 1);
+
+    // tree->Insert(1000, 1);
+    // tree->Insert(888, 1);
+    // tree->Insert(9899, 1);
+    // tree->Insert(7777, 1);
+    // tree->Insert(666, 1);
+    // tree->Insert(8484, 1);
+    // tree->Insert(8848, 1);
+    // tree->Print();
+
+    // BPNodeInfo node{123, 123};
+    // char *str = reinterpret_cast<char *>(&node);
+    // std::cout << strlen(str) << std::endl;
+    // for (int i = 0; i < strlen(str); i++) {
+    //     std::cout << std::hex << (int)str[i] << std::endl;
     // }
-    // tree->Insert(4, 1, newentry);
-    // if (newentry != nullptr) {
-    //     tree = tree->UpdateRoot(newentry);
-    // }
-    tree->Print();
-    // TableManager table("table.csv");
+
+    TableManager table("table.csv");
+    table.BuildTree(1);
     // table.CreateTable();
+    // table.OpenIndexFile(std::to_string(1));
     return 0;
 }
 
