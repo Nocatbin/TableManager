@@ -39,7 +39,7 @@ int main(void) {
     // }
 
     TableManager table("table.csv");
-    table.BuildTree(1);
+    table.BuildIndex(1);
     // table.CreateTable();
     // table.OpenIndexFile(std::to_string(1));
     return 0;

@@ -13,7 +13,7 @@ BPlusNode::BPlusNode(int degree, bool is_leaf)
 CLStatus BPlusNode::Insert(long key, long val, NodePtr &newentry) {
     if (is_leaf_) {
         // 第一个大于等于key
-        std::vector<int>::iterator iter =
+        std::vector<long>::iterator iter =
             std::lower_bound(keys_.begin(), keys_.end(), key);
         keys_.insert(iter, key);
         // values_.insert(iter, key);
