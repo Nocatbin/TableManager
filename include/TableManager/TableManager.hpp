@@ -36,18 +36,14 @@ class TableManager {
     CLStatus CreateTable();
     CLStatus AppendEntry(std::string entry);
     CLStatus BuildIndex(int attr_index);
-    bool OpenIndexFile(std::string attr);
-    bool CreateIndexFile(std::string attr);
-    // CLStatus Insert(int key, int val, NodePtr &newentry);
-    // NodePtr UpdateRoot(NodePtr &newentry);
-    // void Traverse();
-    // CLStatus Search();
-    // CLStatus Release();
+    bool OpenIndexFile(int attr_index);
+    bool CreateIndexFile(int attr_index);
+    void WriteFileCallback(BPlusNode::NodePtr node, std::ofstream *file);
 
  private:
     std::string path_;
     int table_file_;
-    std::ifstream index_file_;
-    std::ofstream output_index_;
+    std::ifstream input_index_file_;
+    std::ofstream output_index_file_;
     std::shared_ptr<BPlusTree> tree_;
 };

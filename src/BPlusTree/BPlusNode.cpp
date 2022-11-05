@@ -1,6 +1,14 @@
 #include <vector>
 #include <iostream>
 #include <memory>
+#include <sstream>
+#include <string>
+#include <queue>
+
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+
 #include <CLStatus.h>
 #include <BPlusNode.hpp>
 
@@ -107,4 +115,18 @@ BPlusNode::NodePtr BPlusNode::UpdateRoot(NodePtr &newentry) {
     return root;
 }
 
-CLStatus BPlusNode::Search() {}
+// std::string BPlusNode::getIndexString() {}
+
+bool BPlusNode::WriteIndexToFile(int fd, int &latest_row) {
+    std::stringstream ss;
+    ss << is_leaf_ ? 1 : 0;
+    ss << "," << keys_.size();
+    for (int idx = 0; idx < keys_.size(); idx++) {
+        ss << "," << keys_[idx];
+    }
+    std::string output = ss.str();
+    write(fd, output.c_str(), strlen(output.c_str()));
+    if (is_leaf_) {
+    } else {
+    }
+}

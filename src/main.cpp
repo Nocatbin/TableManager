@@ -10,13 +10,13 @@ int main(void) {
     std::cout << "Test" << std::endl;
 
     std::shared_ptr<BPlusTree> tree = std::make_shared<BPlusTree>(3);
-    // tree->Insert(1, 1);
-    // tree->Insert(2, 1);
-    // tree->Insert(3, 1);
-    // tree->Insert(4, 1);
-    // tree->Insert(5, 1);
-    // tree->Insert(6, 1);
-    // tree->Insert(7, 1);
+    tree->Insert(1, 1);
+    tree->Insert(2, 1);
+    tree->Insert(3, 1);
+    tree->Insert(4, 1);
+    tree->Insert(5, 1);
+    tree->Insert(6, 1);
+    tree->Insert(7, 1);
     // tree->Insert(8, 1);
     // tree->Insert(9, 1);
     // tree->Insert(10, 1);
@@ -29,7 +29,9 @@ int main(void) {
     // tree->Insert(666, 1);
     // tree->Insert(8484, 1);
     // tree->Insert(8848, 1);
-    // tree->Print();
+    tree->DebugPrint();
+    std::cout << std::endl;
+    tree->LevelTraverse(BPlusTree::GenerateRowNumberFunc);
 
     // BPNodeInfo node{123, 123};
     // char *str = reinterpret_cast<char *>(&node);
@@ -41,7 +43,7 @@ int main(void) {
     TableManager table("table.csv");
     table.BuildIndex(1);
     // table.CreateTable();
-    // table.OpenIndexFile(std::to_string(1));
+    table.OpenIndexFile(1);
     return 0;
 }
 
