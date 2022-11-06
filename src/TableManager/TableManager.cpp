@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include <CLStatus.h>
+#include <CLString.hpp>
 #include <TableManager.hpp>
 
 TableManager::TableManager(std::string path) : path_(path) {
@@ -63,8 +64,8 @@ CLStatus TableManager::AppendEntry(std::string entry) {
     return CLStatus(0, 0);
 }
 
-CLStatus TableManager::BuildIndex(int attr_index) {
-    char num_ptr[ATTRIBUTE_NUMBER];
+CLStatus TableManager::BuildIndex(const int attr_index) {
+    char num_ptr[ATTRIBUTE_LENGTH];
     tree_.reset(new BPlusTree(TREE_DEGREE));
     lseek(table_file_, 11 * attr_index, SEEK_SET);
     for (int i = 0; i < INIT_ROW_NUMBER; i++) {
@@ -72,30 +73,39 @@ CLStatus TableManager::BuildIndex(int attr_index) {
         if (t == -1) {
             std::cout << "read err" << std::endl;
         }
-        lseek(table_file_, 11 * ATTRIBUTE_NUMBER + 1, SEEK_CUR);  // +1 for /n
-        long num = atol(num_ptr);
-        std::cout << num << std::endl;
-        tree_->Insert(num, i);
+        lseek(table_file_, 11 * ATTRIBUTE_LENGTH + 1, SEEK_CUR);  // +1 for /n
+        long key = atol(num_ptr);
+        std::cout << key << std::endl;
+        tree_->Insert(key, i);
     }
     // tree_->DebugPrint();
     return CLStatus(0, 0);
 }
 
-bool TableManager::OpenIndexFile(int attr_index) {
+bool TableManager::OpenIndexFile(const int attr_index) {
     std::string target_file = "attr" + std::to_string(attr_index) + ".txt";
     input_index_file_.open(target_file, std::ios::in);
     if (!input_index_file_) {
-        std::cout << "index file not exist! creating new index" << std::endl;
+        std::cout << "index file not exist! Building new index" << std::endl;
+        BuildIndex(attr_index);
+        tree_->LevelTraverse(BPlusTree::GenerateRowNumberFunc);
+        std::cout << std::endl;
+        tree_->DebugPrint();
+        std::cout << std::endl;
+
+        std::cout << "Dumping Index to File" << std::endl;
         output_index_file_.open(target_file, std::ios::out | std::ios::app);
-        CreateIndexFile(attr_index);
+        DumpIndexToFile(attr_index);
+        input_index_file_.open(target_file, std::ios::in);
     }
-    // output_index_file_.open(target_file, std::ios::out | std::ios::app);
-    // CreateIndexFile(attr_index);
     return true;
 }
 
-bool TableManager::CreateIndexFile(int attr_index) {
-    int col_number = -1;
+bool TableManager::DumpIndexToFile(const int attr_index) {
+    // dump file head
+    output_index_file_ << "CYT_BPTREE," << std::setfill('0') << std::setw(2)
+                       << tree_->Degree() << "," << std::setw(3) << attr_index
+                       << std::endl;
     // bind ofstream object to input param of the callback function
     tree_->LevelTraverse(std::bind(&TableManager::WriteFileCallback, this,
                                    std::placeholders::_1, &output_index_file_));
@@ -113,8 +123,8 @@ void TableManager::WriteFileCallback(BPlusNode::NodePtr node,
     *file << node->is_leaf_ ? 1 : 0;
     // 2 char key size
     *file << "," << std::setfill('0') << std::setw(2) << key_size;
-    // 10 char keys, empty keys are set to -1
-    for (int idx = 0; idx <= node->degree_ - 1; idx++) {
+    // 10 char keys, empty keys are set to -1, max key_size = degree -1
+    for (int idx = 0; idx < node->degree_ - 1; idx++) {
         if (idx < key_size) {
             *file << "," << std::setfill('0') << std::setw(10)
                   << node->keys_[idx];
@@ -122,8 +132,8 @@ void TableManager::WriteFileCallback(BPlusNode::NodePtr node,
             *file << "," << std::setfill('0') << std::setw(10) << -1;
         }
     }
-    // 10 char child row, empty childs are set to -1
-    for (int idx = 0; idx <= node->degree_ - 1; idx++) {
+    // 10 char child row, empty childs are set to -1, max child_size = degree
+    for (int idx = 0; idx < node->degree_; idx++) {
         if (idx >= child_size || node->is_leaf_) {
             *file << "," << std::setfill('0') << std::setw(10) << -1;
         } else {
@@ -134,14 +144,78 @@ void TableManager::WriteFileCallback(BPlusNode::NodePtr node,
     *file << std::endl;
 }
 
-std::vector<std::string> stringSplit(const std::string& str, char delim) {
-    std::stringstream ss(str);
-    std::string item;
-    std::vector<std::string> elems;
-    while (std::getline(ss, item, delim)) {
-        if (!item.empty()) {
-            elems.push_back(item);
-        }
+bool TableManager::SearchFromFile(const int attr_index,
+                                  const long lower,
+                                  const long upper) {
+    // parse file head
+    std::string file_head;
+    input_index_file_ >> file_head;
+    auto file_head_split = Util::StringSplit(file_head, ',');
+    if (file_head_split[0] != "CYT_BPTREE") {
+        std::cout << "Fatal: Index File Corrupted!" << std::endl;
+        return false;
     }
-    return elems;
+    if (std::stoi(file_head_split[2]) != attr_index) {
+        std::cout << "Fatal: Index Attribute not Match!" << std::endl;
+        return false;
+    }
+    int degree = std::stoi(file_head_split[1]);
+    int line_length = 5 + (2 * degree - 1) * (ATTRIBUTE_LENGTH + 1);
+    // parse index file
+    int count = 0;
+    std::cout << "found entry: " << std::endl;
+    while (!input_index_file_.eof()) {
+        std::string line;
+        input_index_file_ >> line;
+        if (input_index_file_.eof()) {
+            break;
+        }
+        auto line_split = Util::StringSplit(line, ',');
+
+        std::vector<long> keys;
+        // nonleaf node only, indicating next node row in index file
+        // std::vector<int> child_rows;
+        // leaf node only, indicating keys' row in origin table file
+        // std::vector<int> origin_file_rows;
+
+        // next index row to parse & search
+        static int next_index_row = -1;
+        int key_size = std::stoi(line_split[1]);
+        bool is_leaf = line_split[0] == "1" ? true : false;
+
+        // parse line
+        std::cout << "keys: ";
+        for (int idx = 0; idx < key_size; idx++) {
+            keys.emplace_back(std::stol(line_split[idx + 2]));
+            std::cout << std::stol(line_split[idx + 2]) << " ";
+        }
+        std::cout << std::endl;
+
+        int key_index = 0;
+        for (key_index = 0; key_index < key_size; key_index++) {
+            if (lower <= keys[key_index]) {
+                break;
+            }
+        }
+        if (is_leaf) {
+            for (int idx = key_index; idx < key_size; idx++) {
+                if (keys[idx] >= lower && keys[idx] <= upper) {
+                    std::cout << keys[idx] << ",";
+                    count++;
+                } else {
+                    std::cout << "Search Done! Count: " << count << std::endl;
+                    return true;
+                }
+            }
+            next_index_row += 1;
+        } else {
+            // nonleaf node, (key_index + 2 + degree - 1) indicates next row to
+            // search
+            next_index_row = std::stoi(line_split[key_index + 2 + degree - 1]);
+        }
+        std::cout << "next row index: " << next_index_row << std::endl;
+        input_index_file_.seekg(17 + line_length * next_index_row,
+                                std::ios::beg);
+    }
+    return true;
 }

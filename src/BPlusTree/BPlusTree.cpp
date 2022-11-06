@@ -57,3 +57,5 @@ void BPlusTree::LevelTraverse(TraverseFunc func) {
         node_queue.pop();
     }
 }
+
+int BPlusTree::Degree() { return root->degree_; }

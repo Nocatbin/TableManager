@@ -7,37 +7,24 @@
 #include <CLStatus.h>
 #include <BPlusTree.hpp>
 
-// #pragma pack(push, 1)
-// struct BPTreeLine {
-//     bool is_leaf;
-//     uint32_t depth;
-//     uint16_t elevation;
-//     uint16_t azimuth;
-//     uint8_t intensity;
-//     uint8_t tag;
-// };
-
-// struct BPNodeInfo {
-//     long key;
-//     int row_index;  // value
-// };
-// #pragma pack(pop)
-
 class TableManager {
  public:
     // TableManager() = delete;
     TableManager(std::string path);
     ~TableManager();
 
-    static constexpr int ATTRIBUTE_NUMBER = 10;
+    static constexpr int ATTRIBUTE_LENGTH = 10;
     static constexpr int INIT_ROW_NUMBER = 10;
     static constexpr int TREE_DEGREE = 3;
 
     CLStatus CreateTable();
     CLStatus AppendEntry(std::string entry);
-    CLStatus BuildIndex(int attr_index);
-    bool OpenIndexFile(int attr_index);
-    bool CreateIndexFile(int attr_index);
+    CLStatus BuildIndex(const int attr_index);
+    bool OpenIndexFile(const int attr_index);
+    bool DumpIndexToFile(const int attr_index);
+    bool SearchFromFile(const int attr_index,
+                        const long lower,
+                        const long upper);
     void WriteFileCallback(BPlusNode::NodePtr node, std::ofstream *file);
 
  private:

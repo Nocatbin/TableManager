@@ -8,7 +8,14 @@
 
 int main(void) {
     std::cout << "Test" << std::endl;
+    TableManager table("table.csv");
+    table.BuildIndex(1);
+    table.OpenIndexFile(1);
+    table.SearchFromFile(1, 650390932, 1435302760);
+    return 0;
+}
 
+void BPTreeInsertTest() {
     std::shared_ptr<BPlusTree> tree = std::make_shared<BPlusTree>(3);
     tree->Insert(1, 1);
     tree->Insert(2, 1);
@@ -30,21 +37,6 @@ int main(void) {
     // tree->Insert(8484, 1);
     // tree->Insert(8848, 1);
     tree->DebugPrint();
-    std::cout << std::endl;
-    tree->LevelTraverse(BPlusTree::GenerateRowNumberFunc);
-
-    // BPNodeInfo node{123, 123};
-    // char *str = reinterpret_cast<char *>(&node);
-    // std::cout << strlen(str) << std::endl;
-    // for (int i = 0; i < strlen(str); i++) {
-    //     std::cout << std::hex << (int)str[i] << std::endl;
-    // }
-
-    TableManager table("table.csv");
-    table.BuildIndex(1);
-    // table.CreateTable();
-    table.OpenIndexFile(1);
-    return 0;
 }
 
 // #include <iostream>
