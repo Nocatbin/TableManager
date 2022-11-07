@@ -37,7 +37,7 @@ void BPlusTree::LevelPrintFunc(BPlusNode::NodePtr node) {
 }
 
 // Print & Label row number in index file for each node
-void BPlusTree::LevelTraverse(TraverseFunc func) {
+void BPlusTree::levelTraverse(TraverseFunc func) {
     std::queue<BPlusNode::NodePtr> node_queue;
     // push root into queue
     if (root != nullptr) {

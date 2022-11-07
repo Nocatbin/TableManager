@@ -2,7 +2,6 @@
 #include <sstream>
 #include <iomanip>
 #include <iostream>
-#include <random>
 #include <fstream>
 #include <functional>
 
@@ -20,7 +19,7 @@ TableManager::TableManager(std::string path) : path_(path) {
     if (-1 == table_file_) {
         std::cout << "File not Found, Creating New Table" << std::endl;
         table_file_ = open(path_.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-        CreateTable();
+        createTable();
     }
 }
 
@@ -33,8 +32,7 @@ TableManager::~TableManager() {
     }
 }
 
-CLStatus TableManager::CreateTable() {
-    std::mt19937 rand_generator{std::random_device{}()};  // ret long
+CLStatus TableManager::createTable() {
     for (int row = 0; row < INIT_ROW_NUMBER; row++) {
         std::stringstream entry;
         entry << std::right << std::setfill('0') << std::setw(10) << row;
@@ -64,14 +62,15 @@ CLStatus TableManager::AppendEntry(std::string entry) {
     return CLStatus(0, 0);
 }
 
-CLStatus TableManager::BuildIndex(const int attr_index) {
+CLStatus TableManager::buildIndex(const int attr_index) {
     char num_ptr[ATTRIBUTE_LENGTH];
     tree_.reset(new BPlusTree(TREE_DEGREE));
     lseek(table_file_, 11 * attr_index, SEEK_SET);
     for (int i = 0; i < INIT_ROW_NUMBER; i++) {
         size_t t = read(table_file_, num_ptr, 10);
         if (t == -1) {
-            std::cout << "read err" << std::endl;
+            std::cout << "read err, out of range" << std::endl;
+            return CLStatus(-1, -1);
         }
         lseek(table_file_, 11 * ATTRIBUTE_LENGTH + 1, SEEK_CUR);  // +1 for /n
         long key = atol(num_ptr);
@@ -82,36 +81,60 @@ CLStatus TableManager::BuildIndex(const int attr_index) {
     return CLStatus(0, 0);
 }
 
-bool TableManager::OpenIndexFile(const int attr_index) {
+bool TableManager::openIndexFile(const int attr_index) {
+    if (attr_index > INIT_ROW_NUMBER) {
+        std::cout << "attribute index out of range!" << std::endl;
+        return false;
+    }
     std::string target_file = "attr" + std::to_string(attr_index) + ".txt";
+    if (input_index_file_.is_open()) {
+        input_index_file_.close();
+    }
+    if (input_index_file_.is_open()) {
+        input_index_file_.close();
+    }
     input_index_file_.open(target_file, std::ios::in);
     if (!input_index_file_) {
-        std::cout << "index file not exist! Building new index" << std::endl;
-        BuildIndex(attr_index);
-        tree_->LevelTraverse(BPlusTree::GenerateRowNumberFunc);
-        std::cout << std::endl;
-        tree_->DebugPrint();
-        std::cout << std::endl;
+        std::cout << "Index File not Exist! Building New Index" << std::endl;
+        CLStatus ret = buildIndex(attr_index);
+        if (!ret.IsSuccess()) {
+            std::cout << "buildIndex Fail! Exiting" << std::endl;
+            return false;
+        }
+        tree_->levelTraverse(BPlusTree::GenerateRowNumberFunc);
+
+        // std::cout << std::endl;
+        // tree_->DebugPrint();
+        // std::cout << std::endl;
 
         std::cout << "Dumping Index to File" << std::endl;
         output_index_file_.open(target_file, std::ios::out | std::ios::app);
-        DumpIndexToFile(attr_index);
+        if (!output_index_file_.is_open()) {
+            std::cout << "Output File Open Err!" << std::endl;
+            return false;
+        }
+        dumpIndexToFile(attr_index);
         input_index_file_.open(target_file, std::ios::in);
+        if (!output_index_file_.is_open()) {
+            std::cout << "Input Index File Open Err!" << std::endl;
+            return false;
+        }
     }
     return true;
 }
 
-bool TableManager::DumpIndexToFile(const int attr_index) {
+bool TableManager::dumpIndexToFile(const int attr_index) {
     // dump file head
     output_index_file_ << "CYT_BPTREE," << std::setfill('0') << std::setw(2)
                        << tree_->Degree() << "," << std::setw(3) << attr_index
                        << std::endl;
     // bind ofstream object to input param of the callback function
-    tree_->LevelTraverse(std::bind(&TableManager::WriteFileCallback, this,
+    tree_->levelTraverse(std::bind(&TableManager::WriteFileCallback, this,
                                    std::placeholders::_1, &output_index_file_));
     return true;
 }
 
+// callback function for dumping index to file during level traverse
 void TableManager::WriteFileCallback(BPlusNode::NodePtr node,
                                      std::ofstream* file) {
     // index file line format
@@ -147,16 +170,22 @@ void TableManager::WriteFileCallback(BPlusNode::NodePtr node,
 bool TableManager::SearchFromFile(const int attr_index,
                                   const long lower,
                                   const long upper) {
+    std::cout << "Search attribute " << attr_index << " " << lower << " - "
+              << upper << std::endl;
+    if (!openIndexFile(attr_index)) {
+        return false;
+    }
+
     // parse file head
     std::string file_head;
     input_index_file_ >> file_head;
-    auto file_head_split = Util::StringSplit(file_head, ',');
+    auto file_head_split = StringSplit(file_head, ',');
     if (file_head_split[0] != "CYT_BPTREE") {
-        std::cout << "Fatal: Index File Corrupted!" << std::endl;
+        std::cout << "Fatal: Index file corrupted!" << std::endl;
         return false;
     }
     if (std::stoi(file_head_split[2]) != attr_index) {
-        std::cout << "Fatal: Index Attribute not Match!" << std::endl;
+        std::cout << "Fatal: Index attribute not match!" << std::endl;
         return false;
     }
     int degree = std::stoi(file_head_split[1]);
@@ -170,7 +199,7 @@ bool TableManager::SearchFromFile(const int attr_index,
         if (input_index_file_.eof()) {
             break;
         }
-        auto line_split = Util::StringSplit(line, ',');
+        auto line_split = StringSplit(line, ',');
 
         std::vector<long> keys;
         // nonleaf node only, indicating next node row in index file
@@ -203,7 +232,7 @@ bool TableManager::SearchFromFile(const int attr_index,
                     std::cout << keys[idx] << ",";
                     count++;
                 } else {
-                    std::cout << "Search Done! Count: " << count << std::endl;
+                    std::cout << "Search done! Count: " << count << std::endl;
                     return true;
                 }
             }

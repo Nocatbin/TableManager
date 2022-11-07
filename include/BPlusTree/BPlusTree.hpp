@@ -15,6 +15,6 @@ class BPlusTree {
 
     static void GenerateRowNumberFunc(BPlusNode::NodePtr node);
     static void LevelPrintFunc(BPlusNode::NodePtr node);
-    void LevelTraverse(TraverseFunc func);
+    void levelTraverse(TraverseFunc func);
     int Degree();
 };

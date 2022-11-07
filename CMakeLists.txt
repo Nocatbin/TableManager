@@ -16,11 +16,18 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src/ SRC_LIST)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/BPlusTree BPTREE_SRC_LIST)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/TableManager TABLE_SRC_LIST)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/Utility UTILITY_SRC_LIST)
+aux_source_directory(${PROJECT_SOURCE_DIR}/src/Utility/thread THREAD_SRC_LIST)
+aux_source_directory(${PROJECT_SOURCE_DIR}/src/Utility/mutex MUTEX_SRC_LIST)
 
 # INCLUDE_DIR
 include_directories(${PROJECT_SOURCE_DIR}/include/BPlusTree)
 include_directories(${PROJECT_SOURCE_DIR}/include/TableManager)
 include_directories(${PROJECT_SOURCE_DIR}/include/Utility)
+include_directories(${PROJECT_SOURCE_DIR}/include/Utility/thread)
+include_directories(${PROJECT_SOURCE_DIR}/include/Utility/mutex)
 
-add_executable(${PROJECT_NAME} ${SRC_LIST} ${BPTREE_SRC_LIST} ${UTILITY_SRC_LIST} ${TABLE_SRC_LIST})
+add_executable(${PROJECT_NAME} ${SRC_LIST} ${BPTREE_SRC_LIST} ${UTILITY_SRC_LIST} ${TABLE_SRC_LIST} ${THREAD_SRC_LIST} ${MUTEX_SRC_LIST})
+
+# target link
+target_link_libraries(${PROJECT_NAME} pthread)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)

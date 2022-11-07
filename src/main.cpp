@@ -1,18 +1,20 @@
 #include <iostream>
 #include <memory>
-#include <string>
-// #include <string.h>
-// #include <BPlusNode.hpp>
+
+#include <CLString.hpp>
 #include <BPlusTree.hpp>
 #include <TableManager.hpp>
 
-int main(void) {
-    std::cout << "Test" << std::endl;
-    TableManager table("table.csv");
-    table.BuildIndex(1);
-    table.OpenIndexFile(1);
+// unit test for create table file randomly
+void CreateTableTest() { TableManager table("test.csv"); }
+
+// unit test for search entry from file
+void SearchFromFileTest() {
+    TableManager table("test.csv");
+    table.SearchFromFile(1, 650390930, 1435302762);
+    table.SearchFromFile(1, 650390930, 1435302760);
     table.SearchFromFile(1, 650390932, 1435302760);
-    return 0;
+    table.SearchFromFile(2, 2000000000, 3000000000);
 }
 
 void BPTreeInsertTest() {
@@ -39,33 +41,66 @@ void BPTreeInsertTest() {
     tree->DebugPrint();
 }
 
-// #include <iostream>
-// #include "CLStatus.h"
-// #include "CLLogger.h"
+void PrintMenu() {
+    std::cout << "-------------------TableManager-------------------"
+              << std::endl;
+    std::cout << "1. Open existing table or create a new one" << std::endl;
+    std::cout << "2. Multi thread append entry test on/off" << std::endl;
+    std::cout << "3. Search entrys between lower and higher" << std::endl;
+    std::cout << "--------------------------------------------------"
+              << std::endl;
+    std::cout << "Enter your choice: " << std::endl;
+}
 
-// using namespace std;
+int main(void) {
+    std::shared_ptr<TableManager> table;
+    PrintMenu();
+    int choice;
+    std::cin >> choice;
+    while (choice != -1) {
+        if (choice == 1) {
+            std::cout << "Enter table file name:" << std::endl;
+            std::string path;
+            std::cin >> path;
+            if (table != nullptr) {
+                std::cout << "WARN: table already opened, opening new table!"
+                          << std::endl;
+            }
+            table.reset(new TableManager(path));
+            std::cout << "Table opened or created!" << std::endl;
+        } else if (choice == 2) {
+            static bool thread1_alive = false;
+            static bool thread2_alive = false;
+            int x;
+            std::cin >> x;
+            // tree->insert(x);
+        } else if (choice == 3) {
+            std::cout << "Enter attribute index & lower & upper :" << std::endl;
+            int index = -1;
+            long lower, upper;
+            std::cin >> index >> lower >> upper;
+            if (table == nullptr) {
+                std::cout << "FATAL: table not opened, exiting!" << std::endl;
+                std::cout << "Enter your choice: " << std::endl;
+                std::cin >> choice;
+                continue;
+            }
+            table->SearchFromFile(index, lower, upper);
+        } else {
+            std::cout << "ERROR: Invalid choice, please enter again!"
+                      << std::endl;
+        }
+        std::cout << "Enter your choice: " << std::endl;
+        std::cin >> choice;
+    }
 
-// CLStatus f()
-// {
-// 	return CLStatus(-1, 4);
-// }
-
-// class A
-// {
-// public:
-// 	~A()
-// 	{
-// 		CLLogger::WriteLogMsg("in a", 0);
-// 	}
-// };
-
-// A a;
+    return 0;
+}
 
 // int main()
 // {
 // 	CLStatus s = f();
 // 	if(!s.IsSuccess())
 // 		CLLogger::WriteLogMsg("this is an error", s.m_clErrorCode);
-
 // 	return 0;
 // }
