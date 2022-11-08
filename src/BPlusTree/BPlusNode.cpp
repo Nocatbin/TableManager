@@ -20,11 +20,15 @@ BPlusNode::BPlusNode(int degree, bool is_leaf)
 
 CLStatus BPlusNode::Insert(long key, long val, NodePtr &newentry) {
     if (is_leaf_) {
-        // 第一个大于等于key
-        std::vector<long>::iterator iter =
-            std::lower_bound(keys_.begin(), keys_.end(), key);
-        keys_.insert(iter, key);
-        // values_.insert(iter, key);
+        // 第一个大于等于key的index
+        int iter_index = 0;
+        for (iter_index = 0; iter_index < keys_.size(); iter_index++) {
+            if (keys_[iter_index] >= key) {
+                break;
+            }
+        }
+        keys_.insert(keys_.begin() + iter_index, key);
+        values_.insert(values_.begin() + iter_index, val);
         std::cout << "Insert key: " << key << std::endl;
 
         if (keys_.size() > degree_ - 1) {
@@ -36,10 +40,12 @@ CLStatus BPlusNode::Insert(long key, long val, NodePtr &newentry) {
             newentry->new_root_key = this->keys_[t];
             for (int idx = t; idx < keys_.size(); idx++) {
                 newentry->keys_.push_back(this->keys_[idx]);
+                newentry->values_.push_back(this->values_[idx]);
                 std::cout << " " << this->keys_[idx];
             }
             std::cout << std::endl;
             this->keys_.resize(t);
+            this->values_.resize(t);
             newentry->next_node_ = this->next_node_;
             if (newentry->next_node_ != nullptr) {
                 newentry->next_node_->prev_node_ = newentry;

@@ -14,7 +14,7 @@ class TableManager {
     TableManager(std::string path);
     ~TableManager();
 
-    static constexpr int ATTRIBUTE_LENGTH = 10;
+    static constexpr int ATTRIBUTE_NUMBER = 10;
     static constexpr int INIT_ROW_NUMBER = 10;
     static constexpr int TREE_DEGREE = 3;
 

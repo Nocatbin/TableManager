@@ -14,11 +14,14 @@
 #include <TableManager.hpp>
 
 TableManager::TableManager(std::string path) : path_(path) {
-    // init
+    // try opening table_file_
     table_file_ = open(path_.c_str(), O_RDWR);
     if (-1 == table_file_) {
+        // open err
         std::cout << "File not Found, Creating New Table" << std::endl;
+        // create new file
         table_file_ = open(path_.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+        // random create table file
         createTable();
     }
 }
@@ -32,16 +35,17 @@ TableManager::~TableManager() {
     }
 }
 
+// randomly create table file
 CLStatus TableManager::createTable() {
     for (int row = 0; row < INIT_ROW_NUMBER; row++) {
         std::stringstream entry;
         entry << std::right << std::setfill('0') << std::setw(10) << row;
-        for (int col = 0; col < 10; col++) {
+        for (int col = 0; col < 100; col++) {
             entry << "," << std::right << std::setfill('0') << std::setw(10)
                   << rand_generator();
         }
         entry << std::endl;
-        // std::cout << entry.str() << std::endl;
+        // dump the entry to file
         CLStatus ret = AppendEntry(entry.str());
         if (!ret.IsSuccess()) {
             return ret;
@@ -50,6 +54,7 @@ CLStatus TableManager::createTable() {
     return CLStatus(0, 0);
 }
 
+// API function for appending entry to table file end
 CLStatus TableManager::AppendEntry(std::string entry) {
     // set cursor to file end
     lseek(table_file_, 0, SEEK_END);
@@ -63,8 +68,9 @@ CLStatus TableManager::AppendEntry(std::string entry) {
 }
 
 CLStatus TableManager::buildIndex(const int attr_index) {
-    char num_ptr[ATTRIBUTE_LENGTH];
+    char num_ptr[ATTRIBUTE_NUMBER];
     tree_.reset(new BPlusTree(TREE_DEGREE));
+    // set file cursor to the attribute of the first row
     lseek(table_file_, 11 * attr_index, SEEK_SET);
     for (int i = 0; i < INIT_ROW_NUMBER; i++) {
         size_t t = read(table_file_, num_ptr, 10);
@@ -72,7 +78,7 @@ CLStatus TableManager::buildIndex(const int attr_index) {
             std::cout << "read err, out of range" << std::endl;
             return CLStatus(-1, -1);
         }
-        lseek(table_file_, 11 * ATTRIBUTE_LENGTH + 1, SEEK_CUR);  // +1 for /n
+        lseek(table_file_, 11 * ATTRIBUTE_NUMBER + 1, SEEK_CUR);  // +1 for /n
         long key = atol(num_ptr);
         std::cout << key << std::endl;
         tree_->Insert(key, i);
@@ -90,8 +96,8 @@ bool TableManager::openIndexFile(const int attr_index) {
     if (input_index_file_.is_open()) {
         input_index_file_.close();
     }
-    if (input_index_file_.is_open()) {
-        input_index_file_.close();
+    if (output_index_file_.is_open()) {
+        output_index_file_.close();
     }
     input_index_file_.open(target_file, std::ios::in);
     if (!input_index_file_) {
@@ -102,11 +108,6 @@ bool TableManager::openIndexFile(const int attr_index) {
             return false;
         }
         tree_->levelTraverse(BPlusTree::GenerateRowNumberFunc);
-
-        // std::cout << std::endl;
-        // tree_->DebugPrint();
-        // std::cout << std::endl;
-
         std::cout << "Dumping Index to File" << std::endl;
         output_index_file_.open(target_file, std::ios::out | std::ios::app);
         if (!output_index_file_.is_open()) {
@@ -141,6 +142,7 @@ void TableManager::WriteFileCallback(BPlusNode::NodePtr node,
     // is_leaf,key_size,keys,...,child_ptr_row,...
     int key_size = node->keys_.size();
     int child_size = node->child_ptrs_.size();
+    int value_size = node->values_.size();
 
     // 1 char flag for leaf node
     *file << node->is_leaf_ ? 1 : 0;
@@ -157,12 +159,16 @@ void TableManager::WriteFileCallback(BPlusNode::NodePtr node,
     }
     // 10 char child row, empty childs are set to -1, max child_size = degree
     for (int idx = 0; idx < node->degree_; idx++) {
-        if (idx >= child_size || node->is_leaf_) {
-            *file << "," << std::setfill('0') << std::setw(10) << -1;
-        } else {
+        if (idx < value_size && node->is_leaf_) {
+            *file << "," << std::setfill('0') << std::setw(10)
+                  << node->values_[idx];
+        } else if (idx < child_size && (!node->is_leaf_)) {
             *file << "," << std::setfill('0') << std::setw(10)
                   << node->child_ptrs_[idx]->row_number_in_file_;
+        } else {
+            *file << "," << std::setfill('0') << std::setw(10) << -1;
         }
+        // if (idx >= child_size && (!node->is_leaf_))
     }
     *file << std::endl;
 }
@@ -189,7 +195,10 @@ bool TableManager::SearchFromFile(const int attr_index,
         return false;
     }
     int degree = std::stoi(file_head_split[1]);
-    int line_length = 5 + (2 * degree - 1) * (ATTRIBUTE_LENGTH + 1);
+    // 5 = (is_leaf flag, key_size,)
+    // keys and child ptr number = (2 * degree - 1)
+    // (ATTRIBUTE_NUMBER + 1) = 10 bytes key + , or /n
+    int line_length = 5 + (2 * degree - 1) * (ATTRIBUTE_NUMBER + 1);
     // parse index file
     int count = 0;
     std::cout << "found entry: " << std::endl;
@@ -202,23 +211,14 @@ bool TableManager::SearchFromFile(const int attr_index,
         auto line_split = StringSplit(line, ',');
 
         std::vector<long> keys;
-        // nonleaf node only, indicating next node row in index file
-        // std::vector<int> child_rows;
-        // leaf node only, indicating keys' row in origin table file
-        // std::vector<int> origin_file_rows;
-
         // next index row to parse & search
         static int next_index_row = -1;
+        // parse single line
         int key_size = std::stoi(line_split[1]);
         bool is_leaf = line_split[0] == "1" ? true : false;
-
-        // parse line
-        std::cout << "keys: ";
         for (int idx = 0; idx < key_size; idx++) {
             keys.emplace_back(std::stol(line_split[idx + 2]));
-            std::cout << std::stol(line_split[idx + 2]) << " ";
         }
-        std::cout << std::endl;
 
         int key_index = 0;
         for (key_index = 0; key_index < key_size; key_index++) {
@@ -238,11 +238,12 @@ bool TableManager::SearchFromFile(const int attr_index,
             }
             next_index_row += 1;
         } else {
-            // nonleaf node, (key_index + 2 + degree - 1) indicates next row to
-            // search
+            // nonleaf node, (key_index + 2 + degree - 1)
+            // indicates next row to search
             next_index_row = std::stoi(line_split[key_index + 2 + degree - 1]);
         }
         std::cout << "next row index: " << next_index_row << std::endl;
+        // 17 Bytes file head
         input_index_file_.seekg(17 + line_length * next_index_row,
                                 std::ios::beg);
     }

@@ -54,45 +54,45 @@ void PrintMenu() {
 
 int main(void) {
     std::shared_ptr<TableManager> table;
-    PrintMenu();
-    int choice;
-    std::cin >> choice;
-    while (choice != -1) {
-        if (choice == 1) {
-            std::cout << "Enter table file name:" << std::endl;
-            std::string path;
-            std::cin >> path;
-            if (table != nullptr) {
-                std::cout << "WARN: table already opened, opening new table!"
-                          << std::endl;
-            }
-            table.reset(new TableManager(path));
-            std::cout << "Table opened or created!" << std::endl;
-        } else if (choice == 2) {
-            static bool thread1_alive = false;
-            static bool thread2_alive = false;
-            int x;
-            std::cin >> x;
-            // tree->insert(x);
-        } else if (choice == 3) {
-            std::cout << "Enter attribute index & lower & upper :" << std::endl;
-            int index = -1;
-            long lower, upper;
-            std::cin >> index >> lower >> upper;
-            if (table == nullptr) {
-                std::cout << "FATAL: table not opened, exiting!" << std::endl;
-                std::cout << "Enter your choice: " << std::endl;
-                std::cin >> choice;
-                continue;
-            }
-            table->SearchFromFile(index, lower, upper);
-        } else {
-            std::cout << "ERROR: Invalid choice, please enter again!"
-                      << std::endl;
-        }
-        std::cout << "Enter your choice: " << std::endl;
-        std::cin >> choice;
-    }
+    // BPTreeInsertTest();
+    SearchFromFileTest();
+    // PrintMenu();
+    // int choice;
+    // std::cin >> choice;
+    // while (choice != -1) {
+    //     if (choice == 1) {
+    //         std::cout << "Enter table file name:" << std::endl;
+    //         std::string path;
+    //         std::cin >> path;
+    //         if (table != nullptr) {
+    //             std::cout << "WARN: table already opened, opening new table!"
+    //                       << std::endl;
+    //         }
+    //         table.reset(new TableManager(path));
+    //         std::cout << "Table opened or created!" << std::endl;
+    //     } else if (choice == 2) {
+    //         static bool thread1_alive = false;
+    //         static bool thread2_alive = false;
+    //         int x;
+    //         std::cin >> x;
+    //         // tree->insert(x);
+    //     } else if (choice == 3) {
+    //         std::cout << "Enter attribute index & lower & upper :" <<
+    //         std::endl; int index = -1; long lower, upper; std::cin >> index
+    //         >> lower >> upper; if (table == nullptr) {
+    //             std::cout << "FATAL: table not opened, exiting!" <<
+    //             std::endl; std::cout << "Enter your choice: " << std::endl;
+    //             std::cin >> choice;
+    //             continue;
+    //         }
+    //         table->SearchFromFile(index, lower, upper);
+    //     } else {
+    //         std::cout << "ERROR: Invalid choice, please enter again!"
+    //                   << std::endl;
+    //     }
+    //     std::cout << "Enter your choice: " << std::endl;
+    //     std::cin >> choice;
+    // }
 
     return 0;
 }
