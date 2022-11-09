@@ -1,6 +1,8 @@
 #pragma once
 // #include <iostream>
 #include <functional>
+#include <CLMutex.h>
+#include <CLCriticalSection.h>
 #include <BPlusNode.hpp>
 
 class BPlusTree {
@@ -15,6 +17,9 @@ class BPlusTree {
 
     static void GenerateRowNumberFunc(BPlusNode::NodePtr node);
     static void LevelPrintFunc(BPlusNode::NodePtr node);
-    void levelTraverse(TraverseFunc func);
+    void LevelTraverse(TraverseFunc func);
     int Degree();
+
+ private:
+    CLMutex tree_mutex;
 };

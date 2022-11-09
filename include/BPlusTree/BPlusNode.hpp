@@ -20,14 +20,8 @@ class BPlusNode : public std::enable_shared_from_this<BPlusNode> {
     NodePtr prev_node_;
     NodePtr next_node_;
 
-    // BPlusNode() = delete;
     BPlusNode(int node_size, bool is_leaf);
     CLStatus Insert(long key, long val, NodePtr &newentry);
     NodePtr UpdateRoot(NodePtr &newentry);
     void Traverse();
-    CLStatus Search();
-    bool WriteIndexToFile(int fd, int &latest_row);
-    // std::string getIndexString();
-
-    //  private:
 };

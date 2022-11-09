@@ -29,23 +29,27 @@ CLStatus BPlusNode::Insert(long key, long val, NodePtr &newentry) {
         }
         keys_.insert(keys_.begin() + iter_index, key);
         values_.insert(values_.begin() + iter_index, val);
-        std::cout << "Insert key: " << key << std::endl;
+        // std::cout << "Insert key: " << key << std::endl;
 
+        // keys overflow, splitting
         if (keys_.size() > degree_ - 1) {
-            std::cout << "keys overflow, splitting" << std::endl;
+            // std::cout << "keys overflow, splitting" << std::endl;
             int t = degree_ / 2;
             newentry.reset(new BPlusNode(degree_, true));
-            // val = this->keys_[t + 1];
-            std::cout << "keys in newentry:";
+            // std::cout << "keys in newentry:";
+            // new root key for adding a key to its father node
             newentry->new_root_key = this->keys_[t];
+            // append half key-value to newentry node
             for (int idx = t; idx < keys_.size(); idx++) {
                 newentry->keys_.push_back(this->keys_[idx]);
                 newentry->values_.push_back(this->values_[idx]);
-                std::cout << " " << this->keys_[idx];
+                // std::cout << " " << this->keys_[idx];
             }
-            std::cout << std::endl;
+            // std::cout << std::endl;
+            // resize origin half key-value
             this->keys_.resize(t);
             this->values_.resize(t);
+            // link table for leaf node, using shared_ptrs
             newentry->next_node_ = this->next_node_;
             if (newentry->next_node_ != nullptr) {
                 newentry->next_node_->prev_node_ = newentry;
@@ -54,27 +58,29 @@ CLStatus BPlusNode::Insert(long key, long val, NodePtr &newentry) {
             newentry->prev_node_ = shared_from_this();
         }
     } else {
+        // nonleaf node case
         int index = 0;
+        // find first key <= keys
         while (index < keys_.size() && key >= keys_[index]) {
             index++;
         }
+        // recursive call Insert until leaf node
         child_ptrs_[index]->Insert(key, val, newentry);
+        // newentry node will update if any node had splitted
         if (newentry != nullptr) {
             keys_.insert(keys_.begin() + index, newentry->new_root_key);
             child_ptrs_.insert(child_ptrs_.begin() + index + 1, newentry);
-
         } else {
             return CLStatus(0, 0);
         }
+        // nonleaf node overflow after insert, splitting
         if (keys_.size() > degree_ - 1) {
             int t = degree_ / 2;
             newentry.reset(new BPlusNode(degree_, false));
-            // *val = this->keys[t];
             newentry->new_root_key = this->keys_[t];
             for (int i = t + 1; i < keys_.size(); i++) {
                 newentry->keys_.push_back(this->keys_[i]);
             }
-
             this->keys_.resize(t);
             for (int i = t + 1; i < child_ptrs_.size(); i++) {
                 newentry->child_ptrs_.push_back(this->child_ptrs_[i]);
@@ -103,7 +109,7 @@ void BPlusNode::Traverse() {
 
 BPlusNode::NodePtr BPlusNode::UpdateRoot(NodePtr &newentry) {
     BPlusNode::NodePtr root = std::make_shared<BPlusNode>(degree_, false);
-    std::cout << "updating root" << std::endl;
+    // std::cout << "updating root" << std::endl;
     if (newentry->new_root_key != -1) {
         root->keys_.emplace_back(newentry->new_root_key);
     } else {
@@ -111,28 +117,5 @@ BPlusNode::NodePtr BPlusNode::UpdateRoot(NodePtr &newentry) {
     }
     root->child_ptrs_.emplace_back(shared_from_this());
     root->child_ptrs_.emplace_back(newentry);
-    // auto& vec = root->child_ptrs_;
-    // for (int idx = 0; idx < vec.size(); idx++) {
-    //     for (int y = 0; y < vec[idx]->keys_.size(); y++) {
-    //         std::cout << "left tree: " << vec[idx]->keys_[y] << std::endl;
-    //     }
-    // }
-
     return root;
-}
-
-// std::string BPlusNode::getIndexString() {}
-
-bool BPlusNode::WriteIndexToFile(int fd, int &latest_row) {
-    std::stringstream ss;
-    ss << is_leaf_ ? 1 : 0;
-    ss << "," << keys_.size();
-    for (int idx = 0; idx < keys_.size(); idx++) {
-        ss << "," << keys_[idx];
-    }
-    std::string output = ss.str();
-    write(fd, output.c_str(), strlen(output.c_str()));
-    if (is_leaf_) {
-    } else {
-    }
 }

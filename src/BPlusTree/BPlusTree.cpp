@@ -1,5 +1,6 @@
 #include <iostream>
 #include <queue>
+#include <CLCriticalSection.h>
 #include <BPlusTree.hpp>
 
 BPlusTree::BPlusTree(int degree) {
@@ -10,6 +11,7 @@ BPlusTree::BPlusTree(int degree) {
 }
 
 void BPlusTree::Insert(long key, long value) {
+    CLCriticalSection cs(&tree_mutex);
     BPlusNode::NodePtr newentry;
     root->Insert(key, value, newentry);
     if (newentry != nullptr) {
@@ -37,7 +39,7 @@ void BPlusTree::LevelPrintFunc(BPlusNode::NodePtr node) {
 }
 
 // Print & Label row number in index file for each node
-void BPlusTree::levelTraverse(TraverseFunc func) {
+void BPlusTree::LevelTraverse(TraverseFunc func) {
     std::queue<BPlusNode::NodePtr> node_queue;
     // push root into queue
     if (root != nullptr) {

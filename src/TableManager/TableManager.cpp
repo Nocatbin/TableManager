@@ -11,6 +11,7 @@
 
 #include <CLStatus.h>
 #include <CLString.hpp>
+#include <CLCriticalSection.h>
 #include <TableManager.hpp>
 
 TableManager::TableManager(std::string path) : path_(path) {
@@ -38,15 +39,9 @@ TableManager::~TableManager() {
 // randomly create table file
 CLStatus TableManager::createTable() {
     for (int row = 0; row < INIT_ROW_NUMBER; row++) {
-        std::stringstream entry;
-        entry << std::right << std::setfill('0') << std::setw(10) << row;
-        for (int col = 0; col < 100; col++) {
-            entry << "," << std::right << std::setfill('0') << std::setw(10)
-                  << rand_generator();
-        }
-        entry << std::endl;
+        std::string entry = getRandomEntry();
         // dump the entry to file
-        CLStatus ret = AppendEntry(entry.str());
+        CLStatus ret = AppendEntry(entry);
         if (!ret.IsSuccess()) {
             return ret;
         }
@@ -54,8 +49,22 @@ CLStatus TableManager::createTable() {
     return CLStatus(0, 0);
 }
 
+std::string TableManager::getRandomEntry() {
+    CLCriticalSection cs(&rand_entry_mutex);
+    std::stringstream entry;
+    static int row = 0;
+    entry << std::right << std::setfill('0') << std::setw(10) << row++;
+    for (int col = 0; col < 100; col++) {
+        entry << "," << std::right << std::setfill('0') << std::setw(10)
+              << rand_generator();
+    }
+    entry << std::endl;
+    return entry.str();
+}
+
 // API function for appending entry to table file end
 CLStatus TableManager::AppendEntry(std::string entry) {
+    CLCriticalSection cs(&table_file_mutex);
     // set cursor to file end
     lseek(table_file_, 0, SEEK_END);
     // write line
@@ -65,6 +74,16 @@ CLStatus TableManager::AppendEntry(std::string entry) {
         return CLStatus(-1, errno);
     }
     return CLStatus(0, 0);
+}
+
+// API function for appending a random entry to table file end
+CLStatus TableManager::AppendEntry() {
+    std::string rand_entry = getRandomEntry();
+    CLStatus ret = AppendEntry(rand_entry);
+    if (!ret.IsSuccess()) {
+        std::cout << "FATAL: Append Error!" << std::endl;
+    }
+    return ret;
 }
 
 CLStatus TableManager::buildIndex(const int attr_index) {
@@ -80,14 +99,13 @@ CLStatus TableManager::buildIndex(const int attr_index) {
         }
         lseek(table_file_, 11 * ATTRIBUTE_NUMBER + 1, SEEK_CUR);  // +1 for /n
         long key = atol(num_ptr);
-        std::cout << key << std::endl;
         tree_->Insert(key, i);
     }
     // tree_->DebugPrint();
     return CLStatus(0, 0);
 }
 
-bool TableManager::openIndexFile(const int attr_index) {
+bool TableManager::OpenIndexFile(const int attr_index) {
     if (attr_index > INIT_ROW_NUMBER) {
         std::cout << "attribute index out of range!" << std::endl;
         return false;
@@ -107,7 +125,7 @@ bool TableManager::openIndexFile(const int attr_index) {
             std::cout << "buildIndex Fail! Exiting" << std::endl;
             return false;
         }
-        tree_->levelTraverse(BPlusTree::GenerateRowNumberFunc);
+        tree_->LevelTraverse(BPlusTree::GenerateRowNumberFunc);
         std::cout << "Dumping Index to File" << std::endl;
         output_index_file_.open(target_file, std::ios::out | std::ios::app);
         if (!output_index_file_.is_open()) {
@@ -130,7 +148,7 @@ bool TableManager::dumpIndexToFile(const int attr_index) {
                        << tree_->Degree() << "," << std::setw(3) << attr_index
                        << std::endl;
     // bind ofstream object to input param of the callback function
-    tree_->levelTraverse(std::bind(&TableManager::WriteFileCallback, this,
+    tree_->LevelTraverse(std::bind(&TableManager::WriteFileCallback, this,
                                    std::placeholders::_1, &output_index_file_));
     return true;
 }
@@ -178,7 +196,7 @@ bool TableManager::SearchFromFile(const int attr_index,
                                   const long upper) {
     std::cout << "Search attribute " << attr_index << " " << lower << " - "
               << upper << std::endl;
-    if (!openIndexFile(attr_index)) {
+    if (!OpenIndexFile(attr_index)) {
         return false;
     }
 
@@ -197,11 +215,11 @@ bool TableManager::SearchFromFile(const int attr_index,
     int degree = std::stoi(file_head_split[1]);
     // 5 = (is_leaf flag, key_size,)
     // keys and child ptr number = (2 * degree - 1)
-    // (ATTRIBUTE_NUMBER + 1) = 10 bytes key + , or /n
-    int line_length = 5 + (2 * degree - 1) * (ATTRIBUTE_NUMBER + 1);
+    // (ATTRIBUTE_LENGTH + 1) = 10 bytes key + , or /n
+    int line_length = 5 + (2 * degree - 1) * (ATTRIBUTE_LENGTH + 1);
     // parse index file
     int count = 0;
-    std::cout << "found entry: " << std::endl;
+    std::cout << "found entry key : value" << std::endl;
     while (!input_index_file_.eof()) {
         std::string line;
         input_index_file_ >> line;
@@ -211,11 +229,13 @@ bool TableManager::SearchFromFile(const int attr_index,
         auto line_split = StringSplit(line, ',');
 
         std::vector<long> keys;
+        std::vector<long> values;
         // next index row to parse & search
         static int next_index_row = -1;
         // parse single line
         int key_size = std::stoi(line_split[1]);
         bool is_leaf = line_split[0] == "1" ? true : false;
+        // deserialize keys
         for (int idx = 0; idx < key_size; idx++) {
             keys.emplace_back(std::stol(line_split[idx + 2]));
         }
@@ -227,9 +247,25 @@ bool TableManager::SearchFromFile(const int attr_index,
             }
         }
         if (is_leaf) {
+            // deserialize values
+            for (int idx = 0; idx < key_size; idx++) {
+                values.emplace_back(
+                    std::stol(line_split[idx + 2 + degree - 1]));
+            }
             for (int idx = key_index; idx < key_size; idx++) {
                 if (keys[idx] >= lower && keys[idx] <= upper) {
-                    std::cout << keys[idx] << ",";
+                    static bool print = true;
+                    if (print) {
+                        std::cout << keys[idx] << ":" << values[idx]
+                                  << std::endl;
+                    }
+
+                    if (count == 9) {
+                        std::cout << "... ..." << std::endl;
+                        print = false;
+                    } else if (count >= 9) {
+                        print = false;
+                    }
                     count++;
                 } else {
                     std::cout << "Search done! Count: " << count << std::endl;
@@ -242,7 +278,6 @@ bool TableManager::SearchFromFile(const int attr_index,
             // indicates next row to search
             next_index_row = std::stoi(line_split[key_index + 2 + degree - 1]);
         }
-        std::cout << "next row index: " << next_index_row << std::endl;
         // 17 Bytes file head
         input_index_file_.seekg(17 + line_length * next_index_row,
                                 std::ios::beg);
