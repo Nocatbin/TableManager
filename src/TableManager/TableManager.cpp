@@ -49,12 +49,13 @@ CLStatus TableManager::createTable() {
     return CLStatus(0, 0);
 }
 
+// generate a string entry line
 std::string TableManager::getRandomEntry() {
     CLCriticalSection cs(&rand_entry_mutex);
     std::stringstream entry;
     static int row = 0;
     entry << std::right << std::setfill('0') << std::setw(10) << row++;
-    for (int col = 0; col < 100; col++) {
+    for (int col = 0; col < ATTRIBUTE_NUMBER; col++) {
         entry << "," << std::right << std::setfill('0') << std::setw(10)
               << rand_generator();
     }

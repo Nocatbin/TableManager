@@ -34,26 +34,29 @@ void SearchFromFileTest() {
 }
 
 void BPTreeInsertTest() {
-    std::shared_ptr<BPlusTree> tree = std::make_shared<BPlusTree>(3);
-    tree->Insert(1, 1);
-    tree->Insert(2, 1);
-    tree->Insert(3, 1);
-    tree->Insert(4, 1);
-    tree->Insert(5, 1);
-    tree->Insert(6, 1);
-    tree->Insert(7, 1);
+    std::shared_ptr<BPlusTree> tree = std::make_shared<BPlusTree>(4);
+    // tree->Insert(1, 1);
+    // tree->Insert(2, 1);
+    // tree->Insert(3, 1);
+    // tree->Insert(4, 1);
+    // tree->Insert(5, 1);
+    // tree->Insert(6, 1);
+    // tree->Insert(7, 1);
     // tree->Insert(8, 1);
     // tree->Insert(9, 1);
     // tree->Insert(10, 1);
     // tree->Insert(11, 1);
 
-    // tree->Insert(1000, 1);
-    // tree->Insert(888, 1);
-    // tree->Insert(9899, 1);
-    // tree->Insert(7777, 1);
-    // tree->Insert(666, 1);
-    // tree->Insert(8484, 1);
-    // tree->Insert(8848, 1);
+    tree->Insert(1000, 1);
+    tree->Insert(888, 1);
+    tree->Insert(9899, 1);
+    tree->Insert(7777, 1);
+    tree->Insert(666, 1);
+    tree->Insert(8484, 1);
+    tree->Insert(8848, 1);
+    tree->Insert(2333, 1);
+    tree->Insert(1234, 1);
+    tree->Insert(1111, 1);
     tree->DebugPrint();
 }
 
@@ -105,7 +108,8 @@ void PrintMenu() {
               << std::endl;
     std::cout << "1. Open existing table or create a new one" << std::endl;
     std::cout << "2. Multi thread append entry test on/off" << std::endl;
-    std::cout << "3. Search entrys between lower and higher" << std::endl;
+    std::cout << "3. Build index for attribute <index>" << std::endl;
+    std::cout << "4. Search entrys between lower and higher" << std::endl;
     std::cout << "--------------------------------------------------"
               << std::endl;
     std::cout << "Enter your choice: " << std::endl;
@@ -113,48 +117,59 @@ void PrintMenu() {
 
 int main(void) {
     std::shared_ptr<TableManager> table;
+    // Unit tests
     // MultiThreadAppendTest();
     // BPTreeInsertTest();
-    SearchFromFileTest();
+    // SearchFromFileTest();
     // BuildIndexTest();
-    // PrintMenu();
-    // int choice;
-    // std::cin >> choice;
-    // while (choice != -1) {
-    //     if (choice == 1) {
-    //         std::cout << "Enter table file name:" << std::endl;
-    //         std::string path;
-    //         std::cin >> path;
-    //         if (table != nullptr) {
-    //             std::cout << "WARN: table already opened, opening new
-    //             table!"
-    //                       << std::endl;
-    //         }
-    //         table.reset(new TableManager(path));
-    //         std::cout << "Table opened or created!" << std::endl;
-    //     } else if (choice == 2) {
-    //         static bool thread1_alive = false;
-    //         static bool thread2_alive = false;
-    //         int x;
-    //         std::cin >> x;
-    //         // tree->insert(x);
-    //     } else if (choice == 3) {
-    //         std::cout << "Enter attribute index & lower & upper :" <<
-    //         std::endl; int index = -1; long lower, upper; std::cin >>
-    //         index
-    //         >> lower >> upper; if (table == nullptr) {
-    //             std::cout << "FATAL: table not opened, exiting!" <<
-    //             std::endl; std::cout << "Enter your choice: " <<
-    //             std::endl; std::cin >> choice; continue;
-    //         }
-    //         table->SearchFromFile(index, lower, upper);
-    //     } else {
-    //         std::cout << "ERROR: Invalid choice, please enter again!"
-    //                   << std::endl;
-    //     }
-    //     std::cout << "Enter your choice: " << std::endl;
-    //     std::cin >> choice;
-    // }
+
+    PrintMenu();
+    int choice;
+    std::cin >> choice;
+    while (choice != -1) {
+        if (choice == 1) {
+            std::cout << "Enter table file name:" << std::endl;
+            std::string path;
+            std::cin >> path;
+            if (table != nullptr) {
+                std::cout << "WARN: table already opened, opening new table !"
+                          << std::endl;
+            }
+            table.reset(new TableManager(path));
+            std::cout << "Table opened or created!" << std::endl;
+        } else if (choice == 2) {
+            MultiThreadAppendTest();
+        } else if (choice == 3) {
+            if (table == nullptr) {
+                std::cout << "Enter table file name:" << std::endl;
+                std::string path;
+                std::cin >> path;
+                table.reset(new TableManager(path));
+                std::cout << "Table opened or created!" << std::endl;
+            }
+            std::cout << "Enter attribute index:" << std::endl;
+            int index = 0;
+            std::cin >> index;
+            table->OpenIndexFile(index);
+        } else if (choice == 4) {
+            std::cout << "Enter attribute index & lower & upper :" << std::endl;
+            int index = -1;
+            long lower, upper;
+            std::cin >> index >> lower >> upper;
+            if (table == nullptr) {
+                std::cout << "FATAL: table not opened, exiting!" << std::endl;
+                std::cout << "Enter your choice: " << std::endl;
+                std::cin >> choice;
+                continue;
+            }
+            table->SearchFromFile(index, lower, upper);
+        } else {
+            std::cout << "ERROR: Invalid choice, please enter again!"
+                      << std::endl;
+        }
+        std::cout << "Enter your choice: " << std::endl;
+        std::cin >> choice;
+    }
 
     return 0;
 }
